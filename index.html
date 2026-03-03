@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM 에이전트 및 MCAAS 아키텍처 연구</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <style>
+        :root {
+            --primary-color: #1e293b;
+            --secondary-color: #475569;
+            --accent-color: #2563eb;
+            --accent-light: #eff6ff;
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --border-color: #e2e8f0;
+            --terminal-bg: #0f172a;
+            --terminal-text: #e2e8f0;
+            --highlight: #10b981;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--primary-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            line-height: 1.3;
+        }
+
+        header h2 {
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: var(--secondary-color);
+            margin: 0;
+        }
+
+        /* Section Titles */
+        .section-header {
+            margin-top: 5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .section-header h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-header h2 .num {
+            color: var(--accent-color);
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .section-desc {
+            color: var(--secondary-color);
+            margin-top: 1rem;
+            font-size: 1.1rem;
+        }
+
+        /* Card Layout (Reference Style) */
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-color: var(--accent-color);
+        }
+
+        .card-content {
+            padding: 1.5rem;
+            flex-grow: 1;
+        }
+
+        .card-content h3 {
+            font-size: 1.3rem;
+            margin-top: 0;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-content ul {
+            padding-left: 1.2rem;
+            margin: 0;
+            color: var(--secondary-color);
+        }
+
+        .card-content li {
+            margin-bottom: 0.8rem;
+        }
+
+        .card-content li strong {
+            color: var(--primary-color);
+        }
+
+        /* Card Footer (핵심 요약) */
+        .card-footer {
+            background-color: var(--accent-light);
+            padding: 1.2rem 1.5rem;
+            border-top: 1px solid #dbeafe;
+            font-weight: 600;
+            color: var(--accent-color);
+            font-size: 0.95rem;
+        }
+
+        /* Application Blocks (Use Case Style) */
+        .app-block {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .app-header {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            padding: 1.2rem 1.5rem;
+            border-radius: 12px 12px 0 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .app-content {
+            padding: 1.5rem;
+        }
+
+        .app-content ul {
+            padding-left: 1.2rem;
+            margin-bottom: 0;
+            color: var(--secondary-color);
+            font-size: 1.05rem;
+        }
+
+        .app-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Terminal / Code Box */
+        .terminal {
+            background-color: var(--terminal-bg);
+            color: var(--terminal-text);
+            padding: 1.2rem;
+            border-radius: 8px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.95rem;
+            margin-top: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .terminal .keyword { color: #38bdf8; font-weight: bold; }
+        .terminal .action { color: #f472b6; }
+        .terminal .success { color: var(--highlight); }
+        .terminal .comment { color: #64748b; }
+
+        footer {
+            text-align: center;
+            padding: 3rem 0 2rem;
+            margin-top: 4rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--secondary-color);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Military Cognitive AI Agent System (MCAAS)</h1>
+            <h2>LLM 에이전트 동향 및 군사 아키텍처 적용 방안 연구</h2>
+        </header>
+
+        <div class="section-header">
+            <h2><span class="num">01.</span> 핵심 논문/기고문 요약</h2>
+            <div class="section-desc">MCAAS 설계의 근간이 되는 최신 AI 에이전트 아키텍처 및 추론 방법론입니다.</div>
+        </div>
+
+        <div class="grid-cards">
+            <div class="card">
+                <div class="card-content">
+                    <h3>📖 에이전트 입문 및 전체 조망</h3>
+                    <ul>
+                        <li><strong>Xi et al. (Survey):</strong> LLM 에이전트의 3대 핵심 요소인 '프로파일링(역할 부여)', '메모리(단기/장기)', '계획 및 행동'의 발전 과정을 총망라. 관련 연구 인용의 뼈대.</li>
+                        <li><strong>Lilian Weng's Blog:</strong> 에이전트를 <code>LLM(두뇌) + Memory + Planning + Tool Use</code>의 직관적인 공식으로 정의하여 복잡한 아키텍처 추상화.</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    핵심: 복잡한 인지 과정을 직관적 모듈로 구조화 및 추상화
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-content">
+                    <h3>🔄 추론과 행동의 결합</h3>
+                    <ul>
+                        <li><strong>ReAct (Yao et al.):</strong> 행동 전 "관찰-판단-행동"이라는 생각의 궤적(Reasoning trace)을 텍스트로 남기게 하여 환각을 줄이고 목표 달성률 향상.</li>
+                        <li><strong>Reflexion (Shinn et al.):</strong> 임무 실패 시 "왜 실패했는지" 스스로 피드백 텍스트를 생성하여 다음 시도에 반영하는 '언어적 강화학습' 메커니즘.</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    핵심: 투명한 추론 궤적(XAI) 확보 및 자가 피드백 기반 학습
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-content">
+                    <h3>🧠 인지 아키텍처 및 다중 에이전트</h3>
+                    <ul>
+                        <li><strong>CoALA (Sumers et al.):</strong> 정보 처리 기구로서 모듈화. 지식/경험 메모리 구조와 의사결정 추론 과정을 인지과학적 관점에서 설계한 프레임워크.</li>
+                        <li><strong>Generative Agents (Park et al.):</strong> 대화, 관찰, 기억 합성(Reflection)을 통한 창발적(Emergent) 행동 패턴 생성.</li>
+                        <li><strong>AutoGen (Wu et al.):</strong> 역할 분담 다중 에이전트들의 협업 파이프라인.</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    핵심: 메모리 기반 인지 모델링 및 역할 분담형 상호작용
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-content">
+                    <h3>🛠️ 도구 사용 (Tool Use)</h3>
+                    <ul>
+                        <li><strong>Toolformer & HuggingGPT:</strong> LLM이 스스로 판단하여 외부 API(계산기, 번역기, 외부 DB 등)를 호출하고, 그 결과값을 다시 자신의 추론 과정에 통합하는 메커니즘.</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    핵심: 외부 환경과의 동적 상호작용 및 시스템 연동
+                </div>
+            </div>
+        </div>
+
+
+        <div class="section-header">
+            <h2><span class="num">02.</span> 군사 AI 아키텍처(MCAAS) 적용 포인트</h2>
+            <div class="section-desc">군사 도메인의 핵심인 보안, 정확성, 실시간 상황 인식을 보장하기 위한 아키텍처 맵핑 전략입니다.</div>
+        </div>
+
+        <div class="app-block">
+            <div class="app-header">
+                🎯 지휘결심지원과 OODA 루프의 구현 (ReAct & Reflexion 적용)
+            </div>
+            <div class="app-content">
+                <ul>
+                    <li>군사 작전의 핵심인 <strong>OODA(관찰-방향설정-결심-타격) 루프</strong>는 ReAct의 <code>Observation-Thought-Action</code> 사이클과 완벽히 일치합니다. 전장 상황 관찰 후 전술적 판단(Thought)을 거쳐 화력 지원을 건의(Action)하는 구조를 설계할 수 있습니다.</li>
+                    <li><strong>Reflexion 메커니즘</strong>은 사후강평(AAR)이나 워게임 시뮬레이션 시스템에 적용, 에이전트가 모의 교전 실패 후 새로운 전술을 스스로 학습하는 체계로 발전시킵니다.</li>
+                </ul>
+                <div class="terminal">
+                    <span class="comment"># ReAct 기반 OODA Loop 시뮬레이션 예시</span><br>
+                    <span class="keyword">[System] Observation:</span> 적 기갑부대 접근 징후 포착 (신뢰도 85%)<br>
+                    <span class="keyword">[Agent] Thought:</span> 현재 신뢰도가 교전수칙을 충족하는지 확인하고, 타격 자산을 평가해야 함.<br>
+                    <span class="action">[Agent] Action:</span> 화력지원 건의 초안 작성 및 지휘관 승인 요청
+                </div>
+            </div>
+        </div>
+
+        <div class="app-block">
+            <div class="app-header">
+                🧠 군사 인지 아키텍처 설계 (CoALA 적용)
+            </div>
+            <div class="app-content">
+                <ul>
+                    <li><strong>작업 기억(Working Memory):</strong> 현재 들어오는 적의 위치, 아군 상태 등 C4I 시스템의 공통작전상황도(COP) 데이터를 담아두는 공간으로 활용합니다.</li>
+                    <li><strong>장기 기억(Long-term Memory):</strong> 군사 교범(FM), 작전 예규(SOP), 과거 교전 기록 등을 벡터 데이터베이스화하여 저장하고, 에이전트가 <code>RAG(검색 증강 생성)</code>를 통해 필요 시 즉각 꺼내 쓰도록 설계합니다.</li>
+                </ul>
+                <div class="terminal">
+                    <span class="keyword">[Retrieve Semantic Memory]</span>: 작전 예규(SOP) 제4장 방어작전 지침 검색 완료<br>
+                    <span class="success">>> Output: "적 주공 접근 시 예비대 투입 전 사전 차단사격 실시"</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="app-block">
+            <div class="app-header">
+                🕸️ 다중 에이전트 기반 합동/협동 작전 (AutoGen & Generative Agents 적용)
+            </div>
+            <div class="app-content">
+                <ul>
+                    <li>정보장교 에이전트, 작전장교 에이전트, 화력장교 에이전트를 각각 생성하여 하나의 <strong>가상 지휘소(Virtual Command Post)</strong> 내에서 서로 교신하며 최적의 방책(COA)을 도출하는 워게임 시뮬레이션 구조를 제안할 수 있습니다.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="app-block">
+            <div class="app-header">
+                ⚙️ C4I 시스템 및 외부 자산 연동 (Tool Use 적용)
+            </div>
+            <div class="app-content">
+                <ul>
+                    <li>군사 에이전트는 폐쇄망 내에서 작동해야 하므로, Toolformer 개념을 적용하여 에이전트가 군 내부의 레이더 데이터베이스를 쿼리하거나 특정 부대의 VCP 플러그인을 통해 <strong>직접 작전 명령 초안을 기안</strong>하도록 시스템을 연동합니다.</li>
+                </ul>
+                <div class="terminal">
+                    <span class="comment"># 외부 API (Tool Use) 호출 예시</span><br>
+                    <span class="keyword">[API Call]</span> <code>query_radar_db(target_id="T-01A")</code><br>
+                    <span class="action">[Execute]</span> <code>generate_vcp_order(type="WARNING", priority="HIGH")</code>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Military Cognitive AI Agent System (MCAAS) Research.</p>
+    </footer>
+
+</body>
+</html>
